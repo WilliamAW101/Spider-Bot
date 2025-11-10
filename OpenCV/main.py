@@ -6,11 +6,11 @@ cap = cv2.VideoCapture(1)
 
 # Optional: lock exposure & gain for more stable brightness
 # (These values may need tuning for your lighting conditions)
-cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # Manual mode
-cap.set(cv2.CAP_PROP_EXPOSURE, -5)         # Try between -4 and -7
-cap.set(cv2.CAP_PROP_GAIN, 0)              # Reduce sensor noise
-cap.set(cv2.CAP_PROP_BRIGHTNESS, 128)      # Optional baseline
-cap.set(cv2.CAP_PROP_CONTRAST, 32)
+# cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # Manual mode
+# cap.set(cv2.CAP_PROP_EXPOSURE, -5)         # Try between -4 and -7
+# cap.set(cv2.CAP_PROP_GAIN, 0)              # Reduce sensor noise
+# cap.set(cv2.CAP_PROP_BRIGHTNESS, 128)      # Optional baseline
+# cap.set(cv2.CAP_PROP_CONTRAST, 32)
 
 while True:
     ret, frame = cap.read()
