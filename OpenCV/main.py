@@ -5,12 +5,12 @@ import time
 
 # --- Initialize Serial (CHANGE PORT IF NEEDED) ---
 try:
-    arduino = serial.Serial('COM4', 9600, timeout=1)
+    arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
     time.sleep(2)  # let Arduino reset
 except:
     arduino = None
 # --- Initialize webcam with DEFAULT settings ---
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
