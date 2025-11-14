@@ -7,12 +7,12 @@ import time
 # Arduino Serial Setup
 # ============================
 try:
-    arduino = serial.Serial('COM3', 9600, timeout=0.1)  # Change COM port if needed
+    arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=0.1)  # Change COM port if needed
     time.sleep(2)  # Allow Arduino to reset
     print("Arduino connected.")
 except:
     arduino = None
-    print("⚠️ Arduino NOT connected. Running in camera-only mode.")
+    print(" Arduino not connected. Running in camera-only mode.")
 
 
 def send_arduino(cmd: str):
@@ -37,10 +37,9 @@ def auto_brighten(frame):
     return frame
 
 
-# ============================
+
 # Camera Initialization
-# ============================
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 # Grab one frame to init
 _, frame = cap.read()
@@ -129,7 +128,7 @@ while True:
             print("⬆️ Forward")
             send_arduino('F')
     else:
-        print("🛑 No cube detected — stopping")
+        print("No cube detected — stopping")
         send_arduino('S')
 
     # Display Windows
