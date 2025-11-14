@@ -1,89 +1,143 @@
 import cv2
 import numpy as np
+import serial
+import time
 
+# ============================
+# Arduino Serial Setup
+# ============================
+try:
+    arduino = serial.Serial('COM3', 9600, timeout=0.1)  # Change COM port if needed
+    time.sleep(2)  # Allow Arduino to reset
+    print("Arduino connected.")
+except:
+    arduino = None
+    print("⚠️ Arduino NOT connected. Running in camera-only mode.")
+
+
+def send_arduino(cmd: str):
+    """Send a single-character command to the Arduino."""
+    if arduino is not None:
+        arduino.write(cmd.encode())
+        time.sleep(0.01)
+
+
+# ============================
+# Auto Brightening
+# ============================
 def auto_brighten(frame):
-    """
-    Brighten frame dynamically if it's too dark
-    """
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     v_mean = np.mean(hsv[:, :, 2])
+
     if v_mean < 90:
         frame = cv2.convertScaleAbs(frame, alpha=1.8, beta=60)
     elif v_mean < 130:
         frame = cv2.convertScaleAbs(frame, alpha=1.5, beta=40)
+
     return frame
 
-# --- Initialize camera ---
+
+# ============================
+# Camera Initialization
+# ============================
 cap = cv2.VideoCapture(0)
 
-# Step 1: Grab the first frame so the camera initializes
-ret, frame = cap.read()
+# Grab one frame to init
+_, frame = cap.read()
 
-# Step 2: Set manual exposure & auto-exposure off
-cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # 0.25 = manual mode in OpenCV
-cap.set(cv2.CAP_PROP_EXPOSURE, -6)         # Adjust depending on your camera/light
-cap.set(cv2.CAP_PROP_GAIN, 0)              # Optional: reduce noise
+# Logitech C270 manual exposure
+cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  
+cap.set(cv2.CAP_PROP_EXPOSURE, -6)
+cap.set(cv2.CAP_PROP_GAIN, 0)
 
-# Optional: capture one more frame to apply settings
-ret, frame = cap.read()
+# Grab again to apply settings
+_, frame = cap.read()
 
-# --- Main loop ---
+print("Camera initialized.")
+
+
+# Main Loop
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
-    # Optional: downscale to speed up processing
     frame = cv2.resize(frame, (640, 480))
-
-    # --- Auto-brighten if necessary ---
     frame = auto_brighten(frame)
 
-    # --- Convert to HSV and create green mask ---
+    # Convert to HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     lower_green = np.array([35, 60, 60])
     upper_green = np.array([85, 255, 255])
     mask = cv2.inRange(hsv, lower_green, upper_green)
 
-    # --- Morphological filtering to remove noise ---
-    kernel = np.ones((5,5), np.uint8)
+    # Morphological noise clean
+    kernel = np.ones((5, 5), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    mask = cv2.GaussianBlur(mask, (9,9), 2)
+    mask = cv2.GaussianBlur(mask, (7, 7), 2)
 
-    # --- Detect circles ---
-    circles = cv2.HoughCircles(
-        mask,
-        cv2.HOUGH_GRADIENT,
-        dp=1.2,
-        minDist=100,
-        param1=100,
-        param2=45,       # Higher = fewer false positives
-        minRadius=10,
-        maxRadius=200
-    )
-
+    # Cube Detection (Contour-based)
     output = frame.copy()
-    if circles is not None:
-        circles = np.uint16(np.around(circles[0, :]))
-        # Pick the largest circle (most likely the real sphere)
-        largest_circle = max(circles, key=lambda c: c[2])
-        x, y, r = largest_circle
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # Draw circle and center
-        cv2.circle(output, (x, y), r, (0, 255, 0), 3)
-        cv2.circle(output, (x, y), 2, (0, 0, 255), 3)
-        cv2.putText(output, "Green Sphere", (x-40, y-r-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-        cv2.putText(output, f"Radius: {r}", (x-40, y-r+15),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cube_found = False
+    cube_center = None
 
-    # --- Display ---
-    cv2.imshow("Green Mask", mask)
-    cv2.imshow("Green Sphere Detection", output)
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area < 500:  # ignore tiny noise
+            continue
 
-    # Press 'q' to quit
+        # Approximate the contour to identify shape
+        peri = cv2.arcLength(cnt, True)
+        approx = cv2.approxPolyDP(cnt, 0.04 * peri, True)
+
+        # Square/cube-like shape has 4 corners
+        if len(approx) == 4:
+            cube_found = True
+
+            # Get center
+            M = cv2.moments(cnt)
+            if M["m00"] != 0:
+                cx = int(M["m10"] / M["m00"])
+                cy = int(M["m01"] / M["m00"])
+                cube_center = (cx, cy)
+
+            # Draw bounding box
+            cv2.drawContours(output, [approx], -1, (0, 255, 0), 3)
+            cv2.circle(output, cube_center, 6, (0, 0, 255), -1)
+            cv2.putText(output, "Green Cube", (cube_center[0] - 40, cube_center[1] - 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+    # Arduino Control Logic
+    if cube_found and cube_center is not None:
+        frame_center = output.shape[1] // 2
+
+        cx = cube_center[0]
+        offset = cx - frame_center
+
+        threshold = 40  # dead-zone for forward movement
+
+        if offset < -threshold:
+            print("➡️ Turn Left")
+            send_arduino('L')
+        elif offset > threshold:
+            print("⬅️ Turn Right")
+            send_arduino('R')
+        else:
+            print("⬆️ Forward")
+            send_arduino('F')
+    else:
+        print("🛑 No cube detected — stopping")
+        send_arduino('S')
+
+    # Display Windows
+    cv2.imshow("Mask", mask)
+    cv2.imshow("Cube Detection", output)
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
+        send_arduino('S')
         break
 
 cap.release()
