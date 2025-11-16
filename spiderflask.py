@@ -15,7 +15,7 @@ except:
     arduino = None
 
 # --- Initialize webcam ---
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
