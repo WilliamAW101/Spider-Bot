@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Object Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .video-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .video-box {
+            background: #f5f5f5;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .video-title {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .video-box img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .status-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .status-label {
+            font-weight: 600;
+        }
+        
+        .status-value {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        
+        .detected {
+            background: #4caf50;
+        }
+        
+        .not-detected {
+            background: #f44336;
+        }
+        
+        .command-display {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .video-container {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Green Object Tracker</h1>
+        
+        <div class="status-panel">
+            <div class="status-item">
+                <span class="status-label">Object Detected:</span>
+                <span class="status-value" id="detected">--</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Center X Position:</span>
+                <span class="status-value" id="centerX">--</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Last Command:</span>
+                <span class="status-value" id="command">--</span>
+            </div>
+            <div class="command-display" id="commandDesc">Waiting for data...</div>
+        </div>
+        
+        <div class="video-container">
+            <div class="video-box">
+                <div class="video-title">Live Detection</div>
+                <img id="videoFeed" src="/video_feed" alt="Live video feed">
+            </div>
+            <div class="video-box">
+                <div class="video-title">Mask (Green Detection)</div>
+                <img id="maskFeed" src="/mask_feed" alt="Green mask">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const commandMap = {
+            'L': '⬅️ LEFT',
+            'R': '➡️ RIGHT',
+            'C': '⬇️ CENTERED',
+            'N': '❌ NO OBJECT'
+        };
+
+        function updateStatus() {
+            fetch('/status')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('detected').textContent = 
+                        data.object_detected ? '✓ YES' : '✗ NO';
+                    document.getElementById('detected').className = 
+                        'status-value ' + (data.object_detected ? 'detected' : 'not-detected');
+                    
+                    document.getElementById('centerX').textContent = 
+                        data.object_detected ? `${data.center_x} / ${data.frame_width}` : 'N/A';
+                    
+                    document.getElementById('command').textContent = 
+                        data.last_command || '--';
+                    
+                    const cmdDesc = commandMap[data.last_command] || 'Waiting...';
+                    document.getElementById('commandDesc').textContent = cmdDesc;
+                })
+                .catch(err => console.error('Status fetch error:', err));
+        }
+
+        // Update status every 200ms
+        setInterval(updateStatus, 200);
+        updateStatus();
+    </script>
+</body>
+</html>
