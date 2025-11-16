@@ -1,6 +1,9 @@
 import cv2
+import os
+import signal
 import numpy as np
 import serial
+import sys
 import time
 from flask import Flask, render_template, Response, jsonify
 from threading import Thread
@@ -20,7 +23,7 @@ cap = cv2.VideoCapture(0)
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 CENTER_X = FRAME_WIDTH // 2
-TOLERANCE = 50
+TOLERANCE =  70
 
 # Global state for web display
 frame_rgb = None
@@ -30,6 +33,7 @@ object_detected = False
 center_x = 0
 frame_lock = __import__('threading').Lock()
 
+
 def send(cmd):
     """Send a single character to Arduino."""
     global last_command
@@ -38,6 +42,13 @@ def send(cmd):
         arduino.write(cmd.encode())
     last_command = cmd
     time.sleep(0.01)
+
+def handle_sigint(signum, frame):
+    print(f"\nReceived signal {signum} ({signal.Signals(signum).name}). Cleaning up and exiting...")
+    # Perform any necessary cleanup here
+    cmd =  'N'
+    send(cmd)
+    sys.exit(0)
 
 def process_frames():
     """Continuously process video frames."""
@@ -166,6 +177,8 @@ def status():
     })
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGINT, handle_sigint)
+
     # Start video processing thread
     video_thread = Thread(target=process_frames, daemon=True)
     video_thread.start()
