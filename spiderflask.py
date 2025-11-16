@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 # --- Initialize Serial ---
 try:
-    arduino = serial.Serial('/dev/ttyAMAO', 9600, timeout=1)
+    arduino = serial.Serial('/dev/ttyAMA0', 9600, timeout=1)
     time.sleep(2)
 except:
     arduino = None
