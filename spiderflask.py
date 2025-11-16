@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 # --- Initialize Serial ---
 try:
-    arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+    arduino = serial.Serial('/dev/ttyAMAO', 9600, timeout=1)
     time.sleep(2)
 except:
     arduino = None
@@ -34,6 +34,7 @@ def send(cmd):
     """Send a single character to Arduino."""
     global last_command
     if arduino is not None:
+        print(cmd)
         arduino.write(cmd.encode())
     last_command = cmd
     time.sleep(0.01)
