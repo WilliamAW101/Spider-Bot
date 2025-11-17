@@ -36,11 +36,10 @@ def send(cmd):
     global last_command, previous_command
     
     # Only send if command is different from last command
-    if cmd != previous_command:
-        if arduino is not None:
-            arduino.write(cmd.encode())
-        last_command = cmd
-        previous_command = cmd
+    if arduino is not None:
+        arduino.write(cmd.encode())
+    last_command = cmd
+    previous_command = cmd
     
     time.sleep(0.01)
 
