@@ -23,31 +23,38 @@ cap = cv2.VideoCapture(0)
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 CENTER_X = FRAME_WIDTH // 2
-TOLERANCE =  70
+TOLERANCE = 70
 
 # Global state for web display
 frame_rgb = None
 mask_frame = None
 last_command = None
+previous_command = None
 object_detected = False
 center_x = 0
 frame_lock = __import__('threading').Lock()
+manual_mode = False
+manual_command = None
 
 
 def send(cmd):
-    """Send a single character to Arduino."""
-    global last_command
-    if arduino is not None:
-        print(cmd)
-        arduino.write(cmd.encode())
-    last_command = cmd
+    """Send a single character to Arduino only if command changed."""
+    global last_command, previous_command
+    
+    # Only send if command is different from last command
+    if cmd != previous_command:
+        if arduino is not None:
+            print(cmd)
+            arduino.write(cmd.encode())
+        last_command = cmd
+        previous_command = cmd
+    
     time.sleep(0.01)
-
 
 
 def process_frames():
     """Continuously process video frames."""
-    global frame_rgb, mask_frame, object_detected, center_x
+    global frame_rgb, mask_frame, object_detected, center_x, manual_mode, manual_command
     
     while True:
         ret, frame = cap.read()
@@ -94,17 +101,25 @@ def process_frames():
         cv2.line(output, (CENTER_X - TOLERANCE, 0), (CENTER_X - TOLERANCE, FRAME_HEIGHT), (100, 100, 255), 1)
         cv2.line(output, (CENTER_X + TOLERANCE, 0), (CENTER_X + TOLERANCE, FRAME_HEIGHT), (100, 100, 255), 1)
 
-        # Send commands
-        if object_found:
-            center_x = cx
-            if cx < CENTER_X - TOLERANCE:
-                send('L')
-            elif cx > CENTER_X + TOLERANCE:
-                send('R')
-            else:
-                send('F')
+        # Send commands based on mode
+        if manual_mode:
+            # In manual mode, use manual_command if set
+            if manual_command:
+                last_command = manual_command
         else:
-            send('N')
+            # In auto mode, track object
+            if object_found:
+                center_x = cx
+                if cx < CENTER_X - TOLERANCE:
+                    cmd = 'L'
+                elif cx > CENTER_X + TOLERANCE:
+                    cmd = 'R'
+                else:
+                    cmd = 'F'
+            else:
+                cmd = 'N'
+            
+            send(cmd)
 
         object_detected = object_found
 
@@ -163,16 +178,44 @@ def status():
         'center_x': center_x,
         'frame_width': FRAME_WIDTH,
         'last_command': last_command,
+        'manual_mode': manual_mode,
         'commands': {
-            'L': 'Object Left',
-            'R': 'Object Right',
+            'L': 'Left',
+            'R': 'Right',
             'F': 'Forward',
+            'B': 'Backward',
             'N': 'No Object'
         }
     })
 
-if __name__ == '__main__':
+@app.route('/toggle_mode')
+def toggle_mode():
+    """Toggle between manual and automatic mode."""
+    global manual_mode
+    manual_mode = not manual_mode
+    return jsonify({'manual_mode': manual_mode})
 
+@app.route('/manual_control/<cmd>')
+def manual_control(cmd):
+    """Send manual command."""
+    global manual_command
+    if cmd in ['L', 'R', 'F', 'B']:
+        manual_command = cmd
+        if manual_mode and arduino is not None:
+            arduino.write(cmd.encode())
+        return jsonify({'status': 'ok', 'command': cmd})
+    return jsonify({'status': 'error', 'message': 'Invalid command'}), 400
+
+@app.route('/grabber/<action>')
+def grabber_control(action):
+    """Control grabber - open or close."""
+    if action in ['O', 'C']:  # O for open, C for close
+        if arduino is not None:
+            arduino.write(action.encode())
+        return jsonify({'status': 'ok', 'action': action})
+    return jsonify({'status': 'error', 'message': 'Invalid action'}), 400
+
+if __name__ == '__main__':
     # Start video processing thread
     video_thread = Thread(target=process_frames, daemon=True)
     video_thread.start()
