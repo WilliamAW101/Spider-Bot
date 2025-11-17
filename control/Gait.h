@@ -11,6 +11,7 @@ public:
   void testLegMotion();
   
   friend class trotForward;
+  friend class trotRotate;
 
 private:
   SpiderLeg* leg;
