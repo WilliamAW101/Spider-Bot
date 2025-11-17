@@ -26,10 +26,12 @@ TOLERANCE = 50
 frame_rgb = None
 mask_frame = None
 last_command = None
-previous_command = None  # Track previous command
+previous_command = None
 object_detected = False
 center_x = 0
 frame_lock = __import__('threading').Lock()
+manual_mode = False
+manual_command = None
 
 def send(cmd):
     """Send a single character to Arduino only if command changed."""
