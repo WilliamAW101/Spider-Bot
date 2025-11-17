@@ -118,7 +118,9 @@ def process_frames():
             else:
                 cmd = 'N'
             
-            send(cmd)
+            # Only send if command changed
+            if cmd != previous_command:
+                send(cmd)
 
         object_detected = object_found
 
@@ -190,19 +192,30 @@ def status():
 @app.route('/toggle_mode')
 def toggle_mode():
     """Toggle between manual and automatic mode."""
-    global manual_mode
+    global manual_mode, previous_command
     manual_mode = not manual_mode
+    # Reset previous command when switching modes to allow fresh commands
+    if manual_mode:
+        previous_command = None
     return jsonify({'manual_mode': manual_mode})
 
 @app.route('/manual_control/<cmd>')
 def manual_control(cmd):
     """Send manual command."""
-    global manual_command
+    global manual_command, previous_command, last_command
     if cmd in ['L', 'R', 'F', 'B']:
-        manual_command = cmd
-        if manual_mode and arduino is not None:
-            arduino.write(cmd.encode())
-        return jsonify({'status': 'ok', 'command': cmd})
+        # Only send if it's a change from the previous command
+        if cmd != previous_command:
+            manual_command = cmd
+            if manual_mode:
+                if arduino is not None:
+                    print(f"Manual: {cmd}")
+                    arduino.write(cmd.encode())
+                previous_command = cmd
+            last_command = cmd
+            return jsonify({'status': 'ok', 'command': cmd, 'sent': True})
+        else:
+            return jsonify({'status': 'ok', 'command': cmd, 'sent': False, 'message': 'Same command, not sent'})
     return jsonify({'status': 'error', 'message': 'Invalid command'}), 400
 
 @app.route('/grabber/<action>')
