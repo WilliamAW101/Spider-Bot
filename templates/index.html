@@ -156,6 +156,7 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
+            margin-bottom: 15px;
         }
         
         .control-btn {
@@ -171,6 +172,10 @@
         
         .control-btn:hover {
             transform: scale(1.05);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
         }
         
         .left-btn {
@@ -189,20 +194,78 @@
             background: #1976D2;
         }
         
-        .center-btn {
+        .forward-btn {
             background: #4CAF50;
+            grid-column: 2;
         }
         
-        .center-btn:hover {
+        .forward-btn:hover {
             background: #45a049;
         }
         
-        .stop-btn {
-            background: #f44336;
+        .backward-btn {
+            background: #FF5722;
+            grid-column: 2;
         }
         
-        .stop-btn:hover {
-            background: #da190b;
+        .backward-btn:hover {
+            background: #E64A19;
+        }
+        
+        .grabber-section {
+            background: rgba(0,0,0,0.1);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .grabber-title {
+            color: white;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .grabber-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .grabber-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            min-width: 120px;
+        }
+        
+        .grabber-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .grabber-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .open-btn {
+            background: #FF9800;
+        }
+        
+        .open-btn:hover {
+            background: #F57C00;
+        }
+        
+        .close-btn {
+            background: #9C27B0;
+        }
+        
+        .close-btn:hover {
+            background: #7B1FA2;
         }
         
         @media (max-width: 768px) {
@@ -248,17 +311,19 @@
         <div class="manual-controls" id="manualControls">
             <div class="control-buttons">
                 <button class="control-btn left-btn" onclick="sendManual('L')">⬅️ LEFT</button>
-                <button class="control-btn center-btn" onclick="sendManual('C')">⬇️ CENTER</button>
+                <button class="control-btn forward-btn" onclick="sendManual('F')">⬆️ FORWARD</button>
                 <button class="control-btn right-btn" onclick="sendManual('R')">➡️ RIGHT</button>
-                <button class="control-btn stop-btn" onclick="sendManual('N')">⏹️ STOP</button>
+                <button class="control-btn left-btn" style="opacity: 0; pointer-events: none;"></button>
+                <button class="control-btn backward-btn" onclick="sendManual('B')">⬇️ BACKWARD</button>
+                <button class="control-btn right-btn" style="opacity: 0; pointer-events: none;"></button>
             </div>
         </div>
         
         <div class="grabber-section">
             <div class="grabber-title">🤖 GRABBER CONTROL</div>
             <div class="grabber-buttons">
-                <button class="grabber-btn open-btn" onclick="controlGrabber('O')"> OPEN</button>
-                <button class="grabber-btn close-btn" onclick="controlGrabber('C')"> CLOSE</button>
+                <button class="grabber-btn open-btn" onclick="controlGrabber('O')">📂 OPEN</button>
+                <button class="grabber-btn close-btn" onclick="controlGrabber('C')">📁 CLOSE</button>
             </div>
         </div>
         
@@ -278,7 +343,8 @@
         const commandMap = {
             'L': '⬅️ LEFT',
             'R': '➡️ RIGHT',
-            'C': '⬇️ CENTERED',
+            'F': '⬆️ FORWARD',
+            'B': '⬇️ BACKWARD',
             'N': '❌ NO OBJECT'
         };
 
@@ -290,7 +356,8 @@
                 .then(data => {
                     currentMode = data.manual_mode ? 'manual' : 'auto';
                     updateModeDisplay();
-                });
+                })
+                .catch(err => console.error('Toggle mode error:', err));
         }
 
         function updateModeDisplay() {
@@ -310,14 +377,18 @@
         }
 
         function sendManual(cmd) {
+            console.log('Sending manual command:', cmd);
             fetch(`/manual_control/${cmd}`)
                 .then(res => res.json())
+                .then(data => console.log('Response:', data))
                 .catch(err => console.error('Manual control error:', err));
         }
 
         function controlGrabber(action) {
+            console.log('Controlling grabber:', action);
             fetch(`/grabber/${action}`)
                 .then(res => res.json())
+                .then(data => console.log('Grabber response:', data))
                 .catch(err => console.error('Grabber control error:', err));
         }
 

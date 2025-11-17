@@ -44,12 +44,11 @@ def send(cmd):
     # Only send if command is different from last command
     if cmd != previous_command:
         if arduino is not None:
-            print(cmd)
+            print(f"Sending: {cmd}")
             arduino.write(cmd.encode())
         last_command = cmd
         previous_command = cmd
-    
-    time.sleep(0.01)
+        time.sleep(0.01)
 
 
 def process_frames():
