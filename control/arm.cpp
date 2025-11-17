@@ -6,8 +6,6 @@ arm::arm(Adafruit_PWMServoDriver* pwm, int gearPin) {
   this->pwm = pwm;
   this->servoGearPin = gearPin;
   this->position = 90;  // Default initial position (adjust as needed)
-  
-  pwm->setPWM(servoGearPin, 0, angleToPulse(position));
 }
 
 int arm::angleToPulse(int angle) {
@@ -27,4 +25,8 @@ void arm::open() {
 void arm::close() {
   // Implement your close logic here
   pwm->setPWM(servoGearPin, 0, angleToPulse(0));  // Example
+}
+
+void arm::init() {
+  pwm->setPWM(servoGearPin, 0, angleToPulse(position));
 }

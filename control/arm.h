@@ -8,6 +8,7 @@ class arm {
     arm(Adafruit_PWMServoDriver* pwm, int gearPin);
     void open();
     void close();
+    void init();
     
   private:
     Adafruit_PWMServoDriver* pwm;

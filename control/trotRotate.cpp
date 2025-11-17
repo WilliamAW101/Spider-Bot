@@ -55,15 +55,15 @@ void trotRotate::rotate(int cycles, int direction) {
       FL->leg->moveToPosition(swingX_FL, swingZ, tibiaZ_swing);
       RR->leg->moveToPosition(swingX_RR, -swingZ * rearLiftReduction, tibiaZ_swing);
       
-      // Stance legs: FR and RL push opposite direction
-      float stanceProgress = 0.5f - ease;
-      float stanceX_FR = -direction * stanceProgress * FR->stepLength;
-      float stanceX_RL = -direction * stanceProgress * RL->stepLength;
+      // // Stance legs: FR and RL push opposite direction
+      // float stanceProgress = 0.5f - ease;
+      // float stanceX_FR = -direction * stanceProgress * FR->stepLength;
+      // float stanceX_RL = -direction * stanceProgress * RL->stepLength;
       
-      float tibiaZ_stance = tibiaGrip * (1.0f - t);
+      // float tibiaZ_stance = tibiaGrip * (1.0f - t);
       
-      FR->leg->moveToPosition(stanceX_FR, 0, tibiaZ_stance);
-      RL->leg->moveToPosition(stanceX_RL, 0, tibiaZ_stance);
+      // FR->leg->moveToPosition(stanceX_FR, 0, tibiaZ_stance);
+      // RL->leg->moveToPosition(stanceX_RL, 0, tibiaZ_stance);
       
       FL->leg->execute();
       FR->leg->execute();
@@ -96,15 +96,15 @@ void trotRotate::rotate(int cycles, int direction) {
       FR->leg->moveToPosition(swingX_FR, swingZ, tibiaZ_swing);
       RL->leg->moveToPosition(swingX_RL, -swingZ * rearLiftReduction, tibiaZ_swing);
       
-      // Stance legs push opposite direction
-      float stanceProgress = 0.5f - ease;
-      float stanceX_FL = -direction * stanceProgress * FL->stepLength;
-      float stanceX_RR = -direction * stanceProgress * RR->stepLength;
+      // // Stance legs push opposite direction
+      // float stanceProgress = 0.5f - ease;
+      // float stanceX_FL = -direction * stanceProgress * FL->stepLength;
+      // float stanceX_RR = -direction * stanceProgress * RR->stepLength;
       
-      float tibiaZ_stance = tibiaGrip * (1.0f - t);
+      // float tibiaZ_stance = tibiaGrip * (1.0f - t);
       
-      FL->leg->moveToPosition(stanceX_FL, 0, tibiaZ_stance);
-      RR->leg->moveToPosition(stanceX_RR, 0, tibiaZ_stance);
+      // FL->leg->moveToPosition(stanceX_FL, 0, tibiaZ_stance);
+      // RR->leg->moveToPosition(stanceX_RR, 0, tibiaZ_stance);
       
       FL->leg->execute();
       FR->leg->execute();
