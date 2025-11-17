@@ -203,7 +203,7 @@ def toggle_mode():
 def manual_control(cmd):
     """Send manual command."""
     global manual_command, previous_command, last_command
-    if cmd in ['L', 'R', 'F', 'B']:
+    if cmd in ['L', 'R', 'F', 'B', 'N']:
         # Only send if it's a change from the previous command
         if cmd != previous_command:
             manual_command = cmd
