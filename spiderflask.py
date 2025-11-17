@@ -166,7 +166,7 @@ def status():
         'commands': {
             'L': 'Object Left',
             'R': 'Object Right',
-            'C': 'Centered',
+            'F': 'Centered',
             'N': 'No Object'
         }
     })
