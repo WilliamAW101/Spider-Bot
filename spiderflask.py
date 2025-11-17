@@ -102,7 +102,7 @@ def process_frames():
             elif cx > CENTER_X + TOLERANCE:
                 send('R')
             else:
-                send('C')
+                send('F')
         else:
             send('N')
 
