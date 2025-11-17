@@ -23,7 +23,7 @@ public:
   void continuousShuffle(); // Loop shuffle until stopped
 
   // rotation
-  void trotForward::rotate(int cycles, int direction);
+  void trotForward::Trot(int cycles, int direction);
 
   
   void stop();  // Immediately stop continuous gait
