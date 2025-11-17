@@ -212,6 +212,26 @@
             background: #E64A19;
         }
         
+        .stop-btn {
+            background: #f44336;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+        }
+        
+        .stop-btn:hover {
+            background: #da190b;
+        }
+        
+        .stop-btn:active {
+            transform: scale(0.95);
+        }
+        
         .grabber-section {
             background: rgba(0,0,0,0.1);
             padding: 20px;
@@ -317,7 +337,7 @@
                 <button class="control-btn backward-btn" onclick="sendManual('B')">⬇️ BACKWARD</button>
                 <button class="control-btn right-btn" style="opacity: 0; pointer-events: none;"></button>
             </div>
-            <button class="stop-btn" style="width: 100%; margin-top: 10px;" onclick="sendManual('S')">⏹️ STOP</button>
+            <button class="stop-btn" style="width: 100%; margin-top: 10px;" onclick="sendManual('N')">⏹️ STOP</button>
         </div>
         
         <div class="grabber-section">
@@ -346,6 +366,7 @@
             'R': '➡️ RIGHT',
             'F': '⬆️ FORWARD',
             'B': '⬇️ BACKWARD',
+            'S': '⏹️ STOP',
             'N': '❌ NO OBJECT'
         };
 
