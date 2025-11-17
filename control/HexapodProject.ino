@@ -21,7 +21,7 @@ float stepHeight = 45;
 int stepDelay = 5;
 int restDelay = 50;
 int xValue = 0;
-float stepLengthRotate = 40;
+float stepLengthRotate = 60;
 float stepHeightRotate = 50;
 int stepDelayRotate = 5;
 
@@ -38,7 +38,7 @@ Gait gait4R(&leg4, stepLengthRotate, stepHeightRotate, stepDelayRotate);
 trotRotate spiderRotate(&gait1R, &gait2R, &gait3R, &gait4R, restDelay);
 
 // hatch arm
-// arm penniArm(&pwm, 12);
+arm penniArm(&pwm, 12);
 
 void setup() {
   Serial.begin(9600);
@@ -64,6 +64,9 @@ void setup() {
   leg3.execute();
   leg4.execute();
   
+  penniArm.init();
+  penniArm.close();
+  
   delay(1000); // get everything setup
   Serial.println("Ready to walk!");
 }
@@ -73,14 +76,14 @@ static char currentCommand = 'S';
 
 void loop() {
 
-  // Pi Control
-
   // Heartbeat
   static unsigned long lastPrint = 0;
   if (millis() - lastPrint > 1000) {
     Serial.println("Waiting for Pi data...");
     lastPrint = millis();
   }
+
+  // Pi Control
   
   // Check for new command from Pi
   if (piSerial.available()) {
@@ -95,7 +98,7 @@ void loop() {
   }
 
   switch (currentCommand) {
-    case 'C':
+    case 'F':
       spiderTrot.Trot(1, -1);
       break;
       
@@ -103,18 +106,26 @@ void loop() {
       spiderRotate.rotateCounterClockwise(1);
       break;
       
-    case 'R':
+    case 'B':
       spiderRotate.rotateClockwise(1);
       break;
       
-    case 'S':
+    case 'N':
       spiderTrot.prepareStance();
+      break;
+    
+    case 'O':
+      penniArm.open();
+      break;
+    
+    case 'C':
+      penniArm.close();
       break;
       
     default:
       Serial.println("Unknown command");
       spiderTrot.prepareStance(); // just stop if the command is wack
-      currentCommand = 'S';  
+      currentCommand = 'N';  
   }
 
   // manual control
@@ -130,6 +141,10 @@ void loop() {
   // } 
   // else {  // stopping
   //   spiderTrot.prepareStance();
+  //   penniArm.open();
+  //   delay(1000);
+  //   penniArm.close();
+  //   delay(1000);
   // }
   // spiderTrot.prepareStance();
 
