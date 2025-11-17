@@ -99,13 +99,20 @@ def process_frames():
         if object_found:
             center_x = cx
             if cx < CENTER_X - TOLERANCE:
-                send('L')
+                cmd = 'L'
             elif cx > CENTER_X + TOLERANCE:
-                send('R')
+                cmd = 'R'
             else:
-                send('C')
+                cmd = 'C'
         else:
-            send('N')
+            cmd = 'N'
+        
+        # Only send if not in manual mode
+        if not manual_mode:
+            send(cmd)
+        else:
+            # In manual mode, just update last_command for display
+            last_command = manual_command
 
         object_detected = object_found
 
@@ -164,13 +171,41 @@ def status():
         'center_x': center_x,
         'frame_width': FRAME_WIDTH,
         'last_command': last_command,
+        'manual_mode': manual_mode,
         'commands': {
             'L': 'Object Left',
             'R': 'Object Right',
-            'C': 'Centered',
+            'F': 'Forward',
             'N': 'No Object'
         }
     })
+
+@app.route('/toggle_mode')
+def toggle_mode():
+    """Toggle between manual and automatic mode."""
+    global manual_mode
+    manual_mode = not manual_mode
+    return jsonify({'manual_mode': manual_mode})
+
+@app.route('/manual_control/<cmd>')
+def manual_control(cmd):
+    """Send manual command."""
+    global manual_command, manual_mode
+    if cmd in ['L', 'R', 'F', 'N']:
+        manual_command = cmd
+        if manual_mode:
+            send(cmd)
+        return jsonify({'status': 'ok', 'command': cmd})
+    return jsonify({'status': 'error', 'message': 'Invalid command'}), 400
+
+@app.route('/grabber/<action>')
+def grabber_control(action):
+    """Control grabber - open or close."""
+    if action in ['O', 'C']:  # O for open, C for close
+        if arduino is not None:
+            arduino.write(action.encode())
+        return jsonify({'status': 'ok', 'action': action})
+    return jsonify({'status': 'error', 'message': 'Invalid action'}), 400
 
 if __name__ == '__main__':
     # Start video processing thread

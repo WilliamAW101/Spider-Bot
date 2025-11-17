@@ -154,7 +154,7 @@
         
         .control-buttons {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 10px;
         }
         
@@ -240,6 +240,28 @@
             <div class="command-display" id="commandDesc">Waiting for data...</div>
         </div>
         
+        <div class="mode-toggle">
+            <button class="toggle-btn active" id="autoBtn" onclick="toggleMode()">🤖 AUTO</button>
+            <button class="toggle-btn" id="manualBtn" onclick="toggleMode()">🎮 MANUAL</button>
+        </div>
+        
+        <div class="manual-controls" id="manualControls">
+            <div class="control-buttons">
+                <button class="control-btn left-btn" onclick="sendManual('L')">⬅️ LEFT</button>
+                <button class="control-btn center-btn" onclick="sendManual('C')">⬇️ CENTER</button>
+                <button class="control-btn right-btn" onclick="sendManual('R')">➡️ RIGHT</button>
+                <button class="control-btn stop-btn" onclick="sendManual('N')">⏹️ STOP</button>
+            </div>
+        </div>
+        
+        <div class="grabber-section">
+            <div class="grabber-title">🤖 GRABBER CONTROL</div>
+            <div class="grabber-buttons">
+                <button class="grabber-btn open-btn" onclick="controlGrabber('O')"> OPEN</button>
+                <button class="grabber-btn close-btn" onclick="controlGrabber('C')"> CLOSE</button>
+            </div>
+        </div>
+        
         <div class="video-container">
             <div class="video-box">
                 <div class="video-title">Live Detection</div>
@@ -260,10 +282,52 @@
             'N': '❌ NO OBJECT'
         };
 
+        let currentMode = 'auto';
+
+        function toggleMode() {
+            fetch('/toggle_mode')
+                .then(res => res.json())
+                .then(data => {
+                    currentMode = data.manual_mode ? 'manual' : 'auto';
+                    updateModeDisplay();
+                });
+        }
+
+        function updateModeDisplay() {
+            const autoBtn = document.getElementById('autoBtn');
+            const manualBtn = document.getElementById('manualBtn');
+            const manualControls = document.getElementById('manualControls');
+
+            if (currentMode === 'manual') {
+                autoBtn.classList.remove('active');
+                manualBtn.classList.add('active');
+                manualControls.classList.add('show');
+            } else {
+                autoBtn.classList.add('active');
+                manualBtn.classList.remove('active');
+                manualControls.classList.remove('show');
+            }
+        }
+
+        function sendManual(cmd) {
+            fetch(`/manual_control/${cmd}`)
+                .then(res => res.json())
+                .catch(err => console.error('Manual control error:', err));
+        }
+
+        function controlGrabber(action) {
+            fetch(`/grabber/${action}`)
+                .then(res => res.json())
+                .catch(err => console.error('Grabber control error:', err));
+        }
+
         function updateStatus() {
             fetch('/status')
                 .then(res => res.json())
                 .then(data => {
+                    currentMode = data.manual_mode ? 'manual' : 'auto';
+                    updateModeDisplay();
+
                     document.getElementById('detected').textContent = 
                         data.object_detected ? '✓ YES' : '✗ NO';
                     document.getElementById('detected').className = 
