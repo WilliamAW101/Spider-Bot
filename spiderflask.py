@@ -7,6 +7,7 @@ import sys
 import time
 from flask import Flask, render_template, Response, jsonify
 from threading import Thread
+import math
 
 app = Flask(__name__)
 
@@ -25,6 +26,11 @@ FRAME_HEIGHT = 480
 CENTER_X = FRAME_WIDTH // 2
 TOLERANCE = 70
 
+# Camera calibration (adjust these based on your camera)
+# Focal length and reference object width in pixels (calibrate for your camera)
+FOCAL_LENGTH = 500  # Adjust based on your camera calibration
+REFERENCE_WIDTH = 50  # Expected width of object in real world (cm)
+
 # Global state for web display
 frame_rgb = None
 mask_frame = None
@@ -32,9 +38,22 @@ last_command = None
 previous_command = None
 object_detected = False
 center_x = 0
+object_distance = 0  # Distance in cm
 frame_lock = __import__('threading').Lock()
 manual_mode = False
 manual_command = None
+
+
+def calculate_distance(object_width_pixels):
+    """
+    Calculate distance from object using focal length method.
+    Distance = (REFERENCE_WIDTH * FOCAL_LENGTH) / object_width_pixels
+    Adjust FOCAL_LENGTH and REFERENCE_WIDTH for your setup.
+    """
+    if object_width_pixels > 0:
+        distance = (REFERENCE_WIDTH * FOCAL_LENGTH) / object_width_pixels
+        return distance
+    return 0
 
 
 def send(cmd):
