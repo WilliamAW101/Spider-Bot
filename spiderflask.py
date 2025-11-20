@@ -24,7 +24,7 @@ cap = cv2.VideoCapture(0)
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 CENTER_X = FRAME_WIDTH // 2
-TOLERANCE = 70
+TOLERANCE = 100
 
 # Camera calibration (adjust these based on your camera)
 # Focal length and reference object width in pixels (calibrate for your camera)
@@ -47,19 +47,6 @@ manual_command = None
 current_position = None  # 'L', 'R', 'F', or None
 position_start_time = None
 POSITION_THRESHOLD = 0.5  # 0.5 seconds before sending command
-
-# Distance to object tracking
-last_object_x = None  # Last known X position of object
-last_object_center_offset = 0  # Offset from center when object was last seen
-object_lost_time = None  # Time when object was last lost from view
-frames_since_detection = 0  # Frame count since last detection
-
-# Grabber auto-trigger settings
-GRABBER_DELAY = 0.5  # Wait 0.5 seconds after object is lost before grabbing
-FORWARD_DURATION = 2.0  # Move forward for 2 seconds after grabbing
-grabber_triggered = False  # Track if grabber sequence has been initiated
-object_ever_detected = False  # Track if object has been seen at least once
-grabber_sequence_start = None  # Time when grab sequence started
 
 
 def calculate_distance(object_width_pixels):
@@ -108,103 +95,6 @@ def update_position_tracking(new_position):
             return new_position  # Return command to send
     
     return None  # Command not ready yet
-
-
-def update_object_tracking(object_found, object_cx):
-    """
-    Track object position and distance to use for grabber arm positioning.
-    When object is lost, calculate estimated distance based on last known position.
-    """
-    global last_object_x, last_object_center_offset, object_lost_time, frames_since_detection
-    
-    if object_found:
-        # Object is visible - update tracking
-        last_object_x = object_cx
-        last_object_center_offset = object_cx - CENTER_X
-        object_lost_time = None
-        frames_since_detection = 0
-    else:
-        # Object is lost - track time and frame count
-        if object_lost_time is None:
-            object_lost_time = time.time()
-        frames_since_detection += 1
-    
-    return {
-        'last_x': last_object_x,
-        'offset_from_center': last_object_center_offset,
-        'frames_lost': frames_since_detection,
-        'time_since_lost': time.time() - object_lost_time if object_lost_time else None
-    }
-
-
-def calculate_grabber_position():
-    """
-    Calculate where grabber arms should move based on last known object position.
-    Returns command indicating which direction to move arms.
-    """
-    if last_object_center_offset is None:
-        return None
-    
-    # If object was to the left of center
-    if last_object_center_offset < -TOLERANCE:
-        return 'L'  # Move grabber left
-    # If object was to the right of center
-    elif last_object_center_offset > TOLERANCE:
-        return 'R'  # Move grabber right
-    # Object was centered
-    else:
-        return 'F'  # Move grabber forward
-
-
-def check_and_trigger_grabber():
-    """
-    Automatically trigger grabber sequence when object is lost.
-    Only triggers if object was detected at least once.
-    Sequence:
-    1. Closes the grabber
-    2. Moves forward for FORWARD_DURATION seconds
-    3. Stops
-    """
-    global grabber_triggered, object_lost_time, object_ever_detected, grabber_sequence_start
-    
-    # Only trigger if object was detected before, is now lost, and hasn't been triggered yet
-    if object_ever_detected and object_lost_time is not None and not grabber_triggered:
-        time_since_lost = time.time() - object_lost_time
-        
-        # Wait for delay threshold before triggering
-        if time_since_lost >= GRABBER_DELAY:
-            grabber_triggered = True
-            grabber_sequence_start = time.time()
-            
-            # Close the grabber
-            if arduino is not None:
-                print("Auto-grabbing: Closing grabber")
-                arduino.write(b'C')  # C for close
-            
-            print(f"Auto-grabbing: Will move forward for {FORWARD_DURATION} seconds")
-            return True
-    
-    # If grabber sequence is active, manage the forward movement
-    if grabber_triggered and grabber_sequence_start is not None:
-        elapsed = time.time() - grabber_sequence_start
-        
-        # Send forward command for FORWARD_DURATION seconds
-        if elapsed < FORWARD_DURATION:
-            send('F')
-        else:
-            # Time elapsed, stop and reset
-            send('N')
-            grabber_triggered = False
-            grabber_sequence_start = None
-            print("Auto-grabbing: Sequence complete")
-    
-    return False
-
-
-def reset_grabber_trigger():
-    """Reset grabber trigger when object is detected again."""
-    global grabber_triggered
-    grabber_triggered = False
 
 
 def process_frames():
@@ -274,21 +164,10 @@ def process_frames():
             else:
                 position = 'N'
             
-            # Update object tracking (for grabber positioning)
-            update_object_tracking(object_found, cx if object_found else None)
-            
-            # If object found, reset grabber trigger; if lost, check if should auto-grab
-            if object_found:
-                reset_grabber_trigger()
-                global object_ever_detected
-                object_ever_detected = True  # Mark that object has been seen
-                # Check if position has been held long enough to send command
-                cmd_to_send = update_position_tracking(position)
-                if cmd_to_send is not None:
-                    send(cmd_to_send)
-            else:
-                # Object is lost - check if we should trigger auto-grab
-                check_and_trigger_grabber()
+            # Check if position has been held long enough to send command
+            cmd_to_send = update_position_tracking(position)
+            if cmd_to_send is not None:
+                send(cmd_to_send)
 
         object_detected = object_found
 
@@ -349,11 +228,6 @@ def status():
         'last_command': last_command,
         'current_position': current_position,
         'manual_mode': manual_mode,
-        'last_object_x': last_object_x,
-        'last_object_offset': last_object_center_offset,
-        'frames_since_lost': frames_since_detection,
-        'time_since_lost': round(time.time() - object_lost_time, 2) if object_lost_time else None,
-        'estimated_grabber_position': calculate_grabber_position(),
         'commands': {
             'L': 'Left',
             'R': 'Right',
