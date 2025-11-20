@@ -24,7 +24,7 @@ cap = cv2.VideoCapture(0)
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 CENTER_X = FRAME_WIDTH // 2
-TOLERANCE = 150
+TOLERANCE = 70
 
 # Camera calibration (adjust these based on your camera)
 # Focal length and reference object width in pixels (calibrate for your camera)
@@ -42,6 +42,11 @@ object_distance = 0  # Distance in cm
 frame_lock = __import__('threading').Lock()
 manual_mode = False
 manual_command = None
+
+# Position tracking
+current_position = None  # 'L', 'R', 'F', or None
+position_start_time = None
+POSITION_THRESHOLD = 0.5  # 0.5 seconds before sending command
 
 
 def calculate_distance(object_width_pixels):
@@ -68,6 +73,28 @@ def send(cmd):
         last_command = cmd
         previous_command = cmd
         time.sleep(0.01)
+
+
+def update_position_tracking(new_position):
+    """
+    Track how long object is in a specific position (L, R, F, or None).
+    Only send command if position is maintained for POSITION_THRESHOLD seconds.
+    """
+    global current_position, position_start_time
+    
+    # If position changed, reset tracking
+    if new_position != current_position:
+        current_position = new_position
+        position_start_time = time.time()
+        return None  # Don't send command yet
+    
+    # Position hasn't changed, check if threshold met
+    if position_start_time is not None:
+        elapsed = time.time() - position_start_time
+        if elapsed >= POSITION_THRESHOLD:
+            return new_position  # Return command to send
+    
+    return None  # Command not ready yet
 
 
 def process_frames():
@@ -129,17 +156,18 @@ def process_frames():
             if object_found:
                 center_x = cx
                 if cx < CENTER_X - TOLERANCE:
-                    cmd = 'L'
+                    position = 'L'
                 elif cx > CENTER_X + TOLERANCE:
-                    cmd = 'R'
+                    position = 'R'
                 else:
-                    cmd = 'F'
+                    position = 'F'
             else:
-                cmd = 'N'
+                position = 'N'
             
-            # Only send if command changed
-            if cmd != previous_command:
-                send(cmd)
+            # Check if position has been held long enough to send command
+            cmd_to_send = update_position_tracking(position)
+            if cmd_to_send is not None:
+                send(cmd_to_send)
 
         object_detected = object_found
 
@@ -198,12 +226,12 @@ def status():
         'center_x': center_x,
         'frame_width': FRAME_WIDTH,
         'last_command': last_command,
+        'current_position': current_position,
         'manual_mode': manual_mode,
         'commands': {
             'L': 'Left',
             'R': 'Right',
             'F': 'Forward',
-            'B': 'Backward',
             'N': 'No Object'
         }
     })
