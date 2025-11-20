@@ -54,6 +54,10 @@ last_object_center_offset = 0  # Offset from center when object was last seen
 object_lost_time = None  # Time when object was last lost from view
 frames_since_detection = 0  # Frame count since last detection
 
+# Grabber auto-trigger settings
+GRABBER_DELAY = 0.5  # Wait 0.5 seconds after object is lost before grabbing
+grabber_triggered = False  # Track if grabber sequence has been initiated
+
 
 def calculate_distance(object_width_pixels):
     """
@@ -149,6 +153,46 @@ def calculate_grabber_position():
         return 'F'  # Move grabber forward
 
 
+def check_and_trigger_grabber():
+    """
+    Automatically trigger grabber sequence when object is lost.
+    Waits GRABBER_DELAY seconds after object disappears, then:
+    1. Moves grabber in direction object was last seen
+    2. Closes the grabber
+    """
+    global grabber_triggered, object_lost_time
+    
+    # Only trigger if object was lost and hasn't been triggered yet
+    if object_lost_time is not None and not grabber_triggered:
+        time_since_lost = time.time() - object_lost_time
+        
+        # Wait for delay threshold before triggering
+        if time_since_lost >= GRABBER_DELAY:
+            grabber_triggered = True
+            grabber_dir = calculate_grabber_position()
+            
+            # Send movement command based on where object was
+            if grabber_dir:
+                print(f"Auto-grabbing: Moving {grabber_dir}")
+                send(grabber_dir)
+            
+            # After a short delay, close the grabber
+            if arduino is not None:
+                time.sleep(0.2)  # Give robot time to move
+                print("Auto-grabbing: Closing grabber")
+                arduino.write(b'C')  # C for close
+            
+            return True
+    
+    return False
+
+
+def reset_grabber_trigger():
+    """Reset grabber trigger when object is detected again."""
+    global grabber_triggered
+    grabber_triggered = False
+
+
 def process_frames():
     """Continuously process video frames."""
     global frame_rgb, mask_frame, object_detected, center_x, manual_mode, manual_command
@@ -219,10 +263,16 @@ def process_frames():
             # Update object tracking (for grabber positioning)
             update_object_tracking(object_found, cx if object_found else None)
             
-            # Check if position has been held long enough to send command
-            cmd_to_send = update_position_tracking(position)
-            if cmd_to_send is not None:
-                send(cmd_to_send)
+            # If object found, reset grabber trigger; if lost, check if should auto-grab
+            if object_found:
+                reset_grabber_trigger()
+                # Check if position has been held long enough to send command
+                cmd_to_send = update_position_tracking(position)
+                if cmd_to_send is not None:
+                    send(cmd_to_send)
+            else:
+                # Object is lost - check if we should trigger auto-grab
+                check_and_trigger_grabber()
 
         object_detected = object_found
 
