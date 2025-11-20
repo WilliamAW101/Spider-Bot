@@ -43,6 +43,17 @@ frame_lock = __import__('threading').Lock()
 manual_mode = False
 manual_command = None
 
+# Command delay tracking
+pending_command = None
+pending_command_time = None
+COMMAND_DELAYS = {
+    'L': 1.0,      # Left: 1 second delay
+    'R': 1.0,      # Right: 1 second delay
+    'F': 0.5,      # Forward: 0.5 second delay
+    'B': 0.0,      # Backward: no delay
+    'N': 0.0       # No object: no delay
+}
+
 
 def calculate_distance(object_width_pixels):
     """
@@ -68,6 +79,35 @@ def send(cmd):
         last_command = cmd
         previous_command = cmd
         time.sleep(0.01)
+
+
+def send_with_delay(cmd):
+    """Send command with appropriate delay based on command type."""
+    global pending_command, pending_command_time
+    
+    delay = COMMAND_DELAYS.get(cmd, 0.0)
+    
+    if delay > 0:
+        # Set pending command
+        pending_command = cmd
+        pending_command_time = time.time()
+    else:
+        # Send immediately
+        send(cmd)
+
+
+def check_pending_commands():
+    """Check if pending command should be sent based on elapsed time."""
+    global pending_command, pending_command_time
+    
+    if pending_command is not None and pending_command_time is not None:
+        elapsed = time.time() - pending_command_time
+        delay = COMMAND_DELAYS.get(pending_command, 0.0)
+        
+        if elapsed >= delay:
+            send(pending_command)
+            pending_command = None
+            pending_command_time = None
 
 
 def process_frames():
@@ -139,7 +179,10 @@ def process_frames():
             
             # Only send if command changed
             if cmd != previous_command:
-                send(cmd)
+                send_with_delay(cmd)
+        
+        # Check if any pending commands should be sent
+        check_pending_commands()
 
         object_detected = object_found
 
@@ -229,7 +272,7 @@ def manual_control(cmd):
             if manual_mode:
                 if arduino is not None:
                     print(f"Manual: {cmd}")
-                    arduino.write(cmd.encode())
+                    send_with_delay(cmd)
                 previous_command = cmd
             last_command = cmd
             return jsonify({'status': 'ok', 'command': cmd, 'sent': True})
