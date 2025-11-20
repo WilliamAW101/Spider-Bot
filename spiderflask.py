@@ -55,7 +55,7 @@ object_lost_time = None  # Time when object was last lost from view
 frames_since_detection = 0  # Frame count since last detection
 
 # Grabber auto-trigger settings
-GRABBER_DELAY = 0.5  # Wait 0.5 seconds after object is lost before grabbing
+GRABBER_DELAY = 1  # Wait 0.5 seconds after object is lost before grabbing
 grabber_triggered = False  # Track if grabber sequence has been initiated
 object_ever_detected = False  # Track if object has been seen at least once
 
