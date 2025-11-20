@@ -24,7 +24,7 @@ cap = cv2.VideoCapture(0)
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 CENTER_X = FRAME_WIDTH // 2
-TOLERANCE = 150
+TOLERANCE = 70
 
 # Camera calibration (adjust these based on your camera)
 # Focal length and reference object width in pixels (calibrate for your camera)
@@ -56,9 +56,10 @@ frames_since_detection = 0  # Frame count since last detection
 
 # Grabber auto-trigger settings
 GRABBER_DELAY = 0.5  # Wait 0.5 seconds after object is lost before grabbing
-FORWARD_DURATION = 5.0  # Move forward for 2 seconds after grabbing
+FORWARD_DURATION = 2.0  # Move forward for 2 seconds after grabbing
 grabber_triggered = False  # Track if grabber sequence has been initiated
 object_ever_detected = False  # Track if object has been seen at least once
+grabber_sequence_start = None  # Time when grab sequence started
 
 
 def calculate_distance(object_width_pixels):
@@ -159,11 +160,12 @@ def check_and_trigger_grabber():
     """
     Automatically trigger grabber sequence when object is lost.
     Only triggers if object was detected at least once.
-    Waits GRABBER_DELAY seconds after object disappears, then:
-    1. Moves grabber in direction object was last seen
-    2. Closes the grabber
+    Sequence:
+    1. Closes the grabber
+    2. Moves forward for FORWARD_DURATION seconds
+    3. Stops
     """
-    global grabber_triggered, object_lost_time, object_ever_detected
+    global grabber_triggered, object_lost_time, object_ever_detected, grabber_sequence_start
     
     # Only trigger if object was detected before, is now lost, and hasn't been triggered yet
     if object_ever_detected and object_lost_time is not None and not grabber_triggered:
@@ -172,20 +174,29 @@ def check_and_trigger_grabber():
         # Wait for delay threshold before triggering
         if time_since_lost >= GRABBER_DELAY:
             grabber_triggered = True
-            grabber_dir = calculate_grabber_position()
+            grabber_sequence_start = time.time()
             
-            # Send movement command based on where object was
-            if grabber_dir:
-                print(f"Auto-grabbing: Moving {grabber_dir}")
-                send(grabber_dir)
-            
-            # After a short delay, close the grabber
+            # Close the grabber
             if arduino is not None:
-                time.sleep(0.2)  # Give robot time to move
                 print("Auto-grabbing: Closing grabber")
                 arduino.write(b'C')  # C for close
             
+            print(f"Auto-grabbing: Will move forward for {FORWARD_DURATION} seconds")
             return True
+    
+    # If grabber sequence is active, manage the forward movement
+    if grabber_triggered and grabber_sequence_start is not None:
+        elapsed = time.time() - grabber_sequence_start
+        
+        # Send forward command for FORWARD_DURATION seconds
+        if elapsed < FORWARD_DURATION:
+            send('F')
+        else:
+            # Time elapsed, stop and reset
+            send('N')
+            grabber_triggered = False
+            grabber_sequence_start = None
+            print("Auto-grabbing: Sequence complete")
     
     return False
 
