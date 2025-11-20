@@ -157,14 +157,15 @@ def calculate_grabber_position():
 def check_and_trigger_grabber():
     """
     Automatically trigger grabber sequence when object is lost.
+    Only triggers if object was detected at least once.
     Waits GRABBER_DELAY seconds after object disappears, then:
     1. Moves grabber in direction object was last seen
     2. Closes the grabber
     """
-    global grabber_triggered, object_lost_time
+    global grabber_triggered, object_lost_time, object_ever_detected
     
-    # Only trigger if object was lost and hasn't been triggered yet
-    if object_lost_time is not None and not grabber_triggered:
+    # Only trigger if object was detected before, is now lost, and hasn't been triggered yet
+    if object_ever_detected and object_lost_time is not None and not grabber_triggered:
         time_since_lost = time.time() - object_lost_time
         
         # Wait for delay threshold before triggering
@@ -267,6 +268,8 @@ def process_frames():
             # If object found, reset grabber trigger; if lost, check if should auto-grab
             if object_found:
                 reset_grabber_trigger()
+                global object_ever_detected
+                object_ever_detected = True  # Mark that object has been seen
                 # Check if position has been held long enough to send command
                 cmd_to_send = update_position_tracking(position)
                 if cmd_to_send is not None:
