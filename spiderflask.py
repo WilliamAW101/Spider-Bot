@@ -56,7 +56,7 @@ frames_since_detection = 0  # Frame count since last detection
 
 # Grabber auto-trigger settings
 GRABBER_DELAY = 0.5  # Wait 0.5 seconds after object is lost before grabbing
-FORWARD_DURATION = 2.0  # Move forward for 2 seconds after grabbing
+FORWARD_DURATION = 5.0  # Move forward for 2 seconds after grabbing
 grabber_triggered = False  # Track if grabber sequence has been initiated
 object_ever_detected = False  # Track if object has been seen at least once
 
