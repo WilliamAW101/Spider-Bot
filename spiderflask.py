@@ -24,7 +24,7 @@ cap = cv2.VideoCapture(0)
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 CENTER_X = FRAME_WIDTH // 2
-TOLERANCE = 100
+TOLERANCE = 70
 
 # Camera calibration (adjust these based on your camera)
 # Focal length and reference object width in pixels (calibrate for your camera)
@@ -47,6 +47,12 @@ manual_command = None
 current_position = None  # 'L', 'R', 'F', or None
 position_start_time = None
 POSITION_THRESHOLD = 0.5  # 0.5 seconds before sending command
+
+# Distance to object tracking
+last_object_x = None  # Last known X position of object
+last_object_center_offset = 0  # Offset from center when object was last seen
+object_lost_time = None  # Time when object was last lost from view
+frames_since_detection = 0  # Frame count since last detection
 
 
 def calculate_distance(object_width_pixels):
@@ -95,6 +101,52 @@ def update_position_tracking(new_position):
             return new_position  # Return command to send
     
     return None  # Command not ready yet
+
+
+def update_object_tracking(object_found, object_cx):
+    """
+    Track object position and distance to use for grabber arm positioning.
+    When object is lost, calculate estimated distance based on last known position.
+    """
+    global last_object_x, last_object_center_offset, object_lost_time, frames_since_detection
+    
+    if object_found:
+        # Object is visible - update tracking
+        last_object_x = object_cx
+        last_object_center_offset = object_cx - CENTER_X
+        object_lost_time = None
+        frames_since_detection = 0
+    else:
+        # Object is lost - track time and frame count
+        if object_lost_time is None:
+            object_lost_time = time.time()
+        frames_since_detection += 1
+    
+    return {
+        'last_x': last_object_x,
+        'offset_from_center': last_object_center_offset,
+        'frames_lost': frames_since_detection,
+        'time_since_lost': time.time() - object_lost_time if object_lost_time else None
+    }
+
+
+def calculate_grabber_position():
+    """
+    Calculate where grabber arms should move based on last known object position.
+    Returns command indicating which direction to move arms.
+    """
+    if last_object_center_offset is None:
+        return None
+    
+    # If object was to the left of center
+    if last_object_center_offset < -TOLERANCE:
+        return 'L'  # Move grabber left
+    # If object was to the right of center
+    elif last_object_center_offset > TOLERANCE:
+        return 'R'  # Move grabber right
+    # Object was centered
+    else:
+        return 'F'  # Move grabber forward
 
 
 def process_frames():
@@ -164,6 +216,9 @@ def process_frames():
             else:
                 position = 'N'
             
+            # Update object tracking (for grabber positioning)
+            update_object_tracking(object_found, cx if object_found else None)
+            
             # Check if position has been held long enough to send command
             cmd_to_send = update_position_tracking(position)
             if cmd_to_send is not None:
@@ -228,6 +283,11 @@ def status():
         'last_command': last_command,
         'current_position': current_position,
         'manual_mode': manual_mode,
+        'last_object_x': last_object_x,
+        'last_object_offset': last_object_center_offset,
+        'frames_since_lost': frames_since_detection,
+        'time_since_lost': round(time.time() - object_lost_time, 2) if object_lost_time else None,
+        'estimated_grabber_position': calculate_grabber_position(),
         'commands': {
             'L': 'Left',
             'R': 'Right',
