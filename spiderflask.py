@@ -51,7 +51,7 @@ POSITION_THRESHOLD = 0.5  # 0.5 seconds before sending command
 # Grabber auto-close tracking
 object_was_detected = False
 object_lost_time = None
-FORWARD_DURATION = 5  # 5 seconds of forward movement after object lost
+FORWARD_DURATION = 10  # 5 seconds of forward movement after object lost
 grabber_closing = False
 
 
