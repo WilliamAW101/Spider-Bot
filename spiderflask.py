@@ -24,7 +24,7 @@ cap = cv2.VideoCapture(0)
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 CENTER_X = FRAME_WIDTH // 2
-TOLERANCE = 100
+TOLERANCE = 150
 
 # Camera calibration (adjust these based on your camera)
 # Focal length and reference object width in pixels (calibrate for your camera)
@@ -43,10 +43,12 @@ frame_lock = __import__('threading').Lock()
 manual_mode = False
 manual_command = None
 
-# Position tracking
+# Position tracking with variable thresholds
 current_position = None  # 'L', 'R', 'F', or None
 position_start_time = None
-POSITION_THRESHOLD = 0.5  # 0.5 seconds before sending command
+POSITION_THRESHOLD_LEFT = 2.0  # 2 seconds for left
+POSITION_THRESHOLD_RIGHT = 2.0  # 2 seconds for right
+POSITION_THRESHOLD_FORWARD = 0.5  # 0.5 seconds for forward
 
 # Grabber auto-close tracking
 object_was_detected = False
@@ -81,10 +83,21 @@ def send(cmd):
         time.sleep(0.01)
 
 
+def get_position_threshold(position):
+    """Return the threshold time for the given position."""
+    if position == 'L':
+        return POSITION_THRESHOLD_LEFT
+    elif position == 'R':
+        return POSITION_THRESHOLD_RIGHT
+    elif position == 'F':
+        return POSITION_THRESHOLD_FORWARD
+    return 0
+
+
 def update_position_tracking(new_position):
     """
     Track how long object is in a specific position (L, R, F, or None).
-    Only send command if position is maintained for POSITION_THRESHOLD seconds.
+    Only send command if position is maintained for the appropriate threshold.
     """
     global current_position, position_start_time
     
@@ -96,8 +109,9 @@ def update_position_tracking(new_position):
     
     # Position hasn't changed, check if threshold met
     if position_start_time is not None:
+        threshold = get_position_threshold(new_position)
         elapsed = time.time() - position_start_time
-        if elapsed >= POSITION_THRESHOLD:
+        if elapsed >= threshold:
             return new_position  # Return command to send
     
     return None  # Command not ready yet
