@@ -24,7 +24,7 @@ cap = cv2.VideoCapture(0)
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 CENTER_X = FRAME_WIDTH // 2
-TOLERANCE = 150
+TOLERANCE = 100
 
 # Camera calibration (adjust these based on your camera)
 # Focal length and reference object width in pixels (calibrate for your camera)
@@ -47,12 +47,6 @@ manual_command = None
 current_position = None  # 'L', 'R', 'F', or None
 position_start_time = None
 POSITION_THRESHOLD = 0.5  # 0.5 seconds before sending command
-
-# Grabber auto-close tracking
-object_was_detected = False
-object_lost_time = None
-FORWARD_DURATION = 10  # 5 seconds of forward movement after object lost
-grabber_closing = False
 
 
 def calculate_distance(object_width_pixels):
@@ -103,34 +97,9 @@ def update_position_tracking(new_position):
     return None  # Command not ready yet
 
 
-def handle_object_lost():
-    """Handle the sequence when object is lost after being detected."""
-    global object_lost_time, grabber_closing
-    
-    if object_lost_time is None:
-        object_lost_time = time.time()
-        # Close the grabber immediately
-        if arduino is not None:
-            print("Object lost - Closing grabber")
-            arduino.write('C'.encode())
-        grabber_closing = True
-    
-    # Check if 5 seconds have passed
-    elapsed = time.time() - object_lost_time
-    if elapsed < FORWARD_DURATION:
-        # Keep sending forward command
-        send('F')
-    else:
-        # 5 seconds elapsed, stop the forward motion
-        print("5 seconds forward motion complete")
-        object_lost_time = None
-        grabber_closing = False
-
-
 def process_frames():
     """Continuously process video frames."""
     global frame_rgb, mask_frame, object_detected, center_x, manual_mode, manual_command
-    global object_was_detected, object_lost_time, current_position, position_start_time
     
     while True:
         ret, frame = cap.read()
@@ -186,29 +155,19 @@ def process_frames():
             # In auto mode, track object
             if object_found:
                 center_x = cx
-                object_was_detected = True
-                object_lost_time = None  # Reset lost time
-                
                 if cx < CENTER_X - TOLERANCE:
                     position = 'L'
                 elif cx > CENTER_X + TOLERANCE:
                     position = 'R'
                 else:
                     position = 'F'
-                
-                # Check if position has been held long enough to send command
-                cmd_to_send = update_position_tracking(position)
-                if cmd_to_send is not None:
-                    send(cmd_to_send)
             else:
-                # Object not found
-                if object_was_detected:
-                    # Object was detected before but is now lost - trigger auto-close sequence
-                    handle_object_lost()
-                else:
-                    # Object was never detected, just reset position tracking
-                    current_position = None
-                    position_start_time = None
+                position = 'N'
+            
+            # Check if position has been held long enough to send command
+            cmd_to_send = update_position_tracking(position)
+            if cmd_to_send is not None:
+                send(cmd_to_send)
 
         object_detected = object_found
 
@@ -269,7 +228,6 @@ def status():
         'last_command': last_command,
         'current_position': current_position,
         'manual_mode': manual_mode,
-        'grabber_closing': grabber_closing,
         'commands': {
             'L': 'Left',
             'R': 'Right',
