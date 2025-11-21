@@ -53,6 +53,7 @@ object_was_detected = False
 object_lost_time = None
 FORWARD_DURATION = 5  # 5 seconds of forward movement after object lost
 grabber_closing = False
+grabber_opened = False
 
 
 def calculate_distance(object_width_pixels):
@@ -105,7 +106,7 @@ def update_position_tracking(new_position):
 
 def handle_object_lost():
     """Handle the sequence when object is lost after being detected."""
-    global object_lost_time, grabber_closing
+    global object_lost_time, grabber_closing, grabber_opened
     
     if object_lost_time is None:
         object_lost_time = time.time()
@@ -114,6 +115,7 @@ def handle_object_lost():
             print("Object lost - Closing grabber")
             arduino.write('C'.encode())
         grabber_closing = True
+        grabber_opened = False
     
     # Check if 5 seconds have passed
     elapsed = time.time() - object_lost_time
@@ -122,9 +124,11 @@ def handle_object_lost():
         send('F')
     else:
         # 5 seconds elapsed, open the grabber
-        print("5 seconds forward motion complete - Opening grabber")
-        if arduino is not None:
-            arduino.write('O'.encode())
+        if not grabber_opened:
+            print("5 seconds forward motion complete - Opening grabber")
+            if arduino is not None:
+                arduino.write('O'.encode())
+            grabber_opened = True
         object_lost_time = None
         grabber_closing = False
 
@@ -132,7 +136,7 @@ def handle_object_lost():
 def process_frames():
     """Continuously process video frames."""
     global frame_rgb, mask_frame, object_detected, center_x, manual_mode, manual_command
-    global object_was_detected, object_lost_time, current_position, position_start_time
+    global object_was_detected, object_lost_time, current_position, position_start_time, grabber_opened
     
     while True:
         ret, frame = cap.read()
@@ -190,6 +194,7 @@ def process_frames():
                 center_x = cx
                 object_was_detected = True
                 object_lost_time = None  # Reset lost time
+                grabber_opened = False  # Reset for next cycle
                 
                 if cx < CENTER_X - TOLERANCE:
                     position = 'L'
