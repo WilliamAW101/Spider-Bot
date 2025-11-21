@@ -51,7 +51,7 @@ POSITION_THRESHOLD = 0.5  # 0.5 seconds before sending command
 # Grabber auto-close tracking
 object_was_detected = False
 object_lost_time = None
-FORWARD_DURATION = 10  # 5 seconds of forward movement after object lost
+FORWARD_DURATION = 5  # 5 seconds of forward movement after object lost
 grabber_closing = False
 
 
@@ -121,8 +121,10 @@ def handle_object_lost():
         # Keep sending forward command
         send('F')
     else:
-        # 5 seconds elapsed, stop the forward motion
-        print("5 seconds forward motion complete")
+        # 5 seconds elapsed, open the grabber
+        print("5 seconds forward motion complete - Opening grabber")
+        if arduino is not None:
+            arduino.write('O'.encode())
         object_lost_time = None
         grabber_closing = False
 
