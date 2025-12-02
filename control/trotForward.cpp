@@ -173,7 +173,7 @@ void trotForward::alternatingWalk(int cycles) {
 void trotForward::Trot(int cycles, int direction) {
   const int frames = 80;
   const float stanceRatio = 0.3f;
-  const float tibiaGrip = 15.0f;  // Adjust this value - degrees to pull foot inward during stance
+  const float tibiaGrip = 15.0f;  
   
   for (int cycle = 0; cycle < cycles; cycle++) {
     
@@ -200,8 +200,8 @@ void trotForward::Trot(int cycles, int direction) {
       FL->leg->moveToPosition(swingX_FL, swingZ, tibiaZ_swing);
       RR->leg->moveToPosition(swingX_RR, -swingZ, tibiaZ_swing);
       
-      // Stance legs: FR (right) and RL (left) push with foot pulled inward
-      float stanceProgress = 0.5f - ease;  // +0.5 to -0.5 (opposite of swing)
+      // Stance legs: FR and RL push with foot pulled inward
+      float stanceProgress = 0.5f - ease;  
       float stanceX_FR = direction * stanceProgress * FR->stepLength;   // Right leg
       float stanceX_RL = -direction * stanceProgress * RL->stepLength;  // Left leg
       

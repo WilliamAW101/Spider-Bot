@@ -11,7 +11,7 @@ private:
   int femurChannel;
   int tibiaChannel;
   
-  // Current angles (in degrees)
+  // Angles
   float coxaAngle;
   float femurAngle;
   float tibiaAngle;
@@ -26,7 +26,7 @@ private:
   int femurMin, femurMax;
   int tibiaMin, tibiaMax;
   
-  // Convert angle to PWM pulse width for Driver
+  // Convert angle to PWM pulse 
   int angleToPulse(int angle);
   
 public:
@@ -34,7 +34,7 @@ public:
             int coxaChannel, int femurChannel, int tibiaChannel,
             int coxaOffset, int femurOffset, int tibiaOffset);
   
-  // Simple relative movement
+  // Movement
   bool moveToPosition(float x, float y, float z);
   
   // Direct angle control

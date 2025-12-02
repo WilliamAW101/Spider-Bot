@@ -5,26 +5,22 @@
 arm::arm(Adafruit_PWMServoDriver* pwm, int gearPin) {
   this->pwm = pwm;
   this->servoGearPin = gearPin;
-  this->position = 90;  // Default initial position (adjust as needed)
+  this->position = 90; 
 }
 
 int arm::angleToPulse(int angle) {
-  // Convert angle (0-180) to pulse width (typically 150-600 for servos)
-  // Adjust these values based on your servo specs
-  int pulseMin = 150;  // Minimum pulse length (0 degrees)
-  int pulseMax = 600;  // Maximum pulse length (180 degrees)
+  int pulseMin = 150;  
+  int pulseMax = 600; 
   
   return map(angle, 0, 180, pulseMin, pulseMax);
 }
 
 void arm::open() {
-  // Implement your open logic here
-  pwm->setPWM(servoGearPin, 0, angleToPulse(180));  // Example
+  pwm->setPWM(servoGearPin, 0, angleToPulse(180)); 
 }
 
 void arm::close() {
-  // Implement your close logic here
-  pwm->setPWM(servoGearPin, 0, angleToPulse(0));  // Example
+  pwm->setPWM(servoGearPin, 0, angleToPulse(0));
 }
 
 void arm::init() {

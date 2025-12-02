@@ -29,19 +29,19 @@ void trotRotate::rotate(int cycles, int direction) {
   const int frames = 80;
   const float stanceRatio = 0.3f;
   const float tibiaGrip = 15.0f;
-  
+
   for (int cycle = 0; cycle < cycles; cycle++) {
-    
-    // FL + RR swing (diagonal pair)
+
+    // FL + RR swing 
     for (int f = 0; f < frames; f++) {
       float t = (float)f / (frames - 1);
       float ease = easeInOutQuad(t);
-      
+
       // For rotation: both legs move in same rotational direction
       float swingProgress = -0.5f + ease;  
       float swingX_FL = direction * swingProgress * FL->stepLength;  // Both go same direction for rotation
       float swingX_RR = direction * swingProgress * RR->stepLength;
-      
+
       // Swing height and tibia position
       float swingZ, tibiaZ_swing;
       if (t < stanceRatio) {
@@ -51,38 +51,38 @@ void trotRotate::rotate(int cycles, int direction) {
         swingZ = FL->stepHeight * sinf((t - stanceRatio) / (1.0f - stanceRatio) * M_PI);
         tibiaZ_swing = 0.0f;
       }
-      
+
       FL->leg->moveToPosition(swingX_FL, swingZ, tibiaZ_swing);
       RR->leg->moveToPosition(swingX_RR, -swingZ * rearLiftReduction, tibiaZ_swing);
-      
+
       // // Stance legs: FR and RL push opposite direction
       // float stanceProgress = 0.5f - ease;
       // float stanceX_FR = -direction * stanceProgress * FR->stepLength;
       // float stanceX_RL = -direction * stanceProgress * RL->stepLength;
-      
+
       // float tibiaZ_stance = tibiaGrip * (1.0f - t);
-      
+
       // FR->leg->moveToPosition(stanceX_FR, 0, tibiaZ_stance);
       // RL->leg->moveToPosition(stanceX_RL, 0, tibiaZ_stance);
-      
+
       FL->leg->execute();
       FR->leg->execute();
       RL->leg->execute();
       RR->leg->execute();
-      
+
       delay(FL->delayStep);
     }
     delay(restDelay / 2);
-    
-    // FR + RL swing (diagonal pair)
+
+    // FR + RL swing 
     for (int f = 0; f < frames; f++) {
       float t = (float)f / (frames - 1);
       float ease = easeInOutQuad(t);
-      
+
       float swingProgress = -0.5f + ease;
       float swingX_FR = direction * swingProgress * FR->stepLength;
       float swingX_RL = direction * swingProgress * RL->stepLength;
-      
+
       // Swing height and tibia position
       float swingZ, tibiaZ_swing;
       if (t < stanceRatio) {
@@ -92,25 +92,25 @@ void trotRotate::rotate(int cycles, int direction) {
         swingZ = FR->stepHeight * sinf((t - stanceRatio) / (1.0f - stanceRatio) * M_PI);
         tibiaZ_swing = 0.0f;
       }
-      
+
       FR->leg->moveToPosition(swingX_FR, swingZ, tibiaZ_swing);
       RL->leg->moveToPosition(swingX_RL, -swingZ * rearLiftReduction, tibiaZ_swing);
-      
+
       // // Stance legs push opposite direction
       // float stanceProgress = 0.5f - ease;
       // float stanceX_FL = -direction * stanceProgress * FL->stepLength;
       // float stanceX_RR = -direction * stanceProgress * RR->stepLength;
-      
+
       // float tibiaZ_stance = tibiaGrip * (1.0f - t);
-      
+
       // FL->leg->moveToPosition(stanceX_FL, 0, tibiaZ_stance);
       // RR->leg->moveToPosition(stanceX_RR, 0, tibiaZ_stance);
-      
+
       FL->leg->execute();
       FR->leg->execute();
       RL->leg->execute();
       RR->leg->execute();
-      
+
       delay(FR->delayStep);
     }
     delay(restDelay / 2);

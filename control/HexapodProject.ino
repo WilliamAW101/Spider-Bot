@@ -7,7 +7,7 @@
 #include "arm.h"
 #include <SoftwareSerial.h>
 
-SoftwareSerial piSerial(10, 11); // RX=10, TX=11
+SoftwareSerial piSerial(10, 11); // RX=10 TX=11
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
@@ -16,12 +16,12 @@ SpiderLeg leg2(&pwm, 3, 4, 5, 140, 120, 100);     // Front Right
 SpiderLeg leg3(&pwm, 6, 7, 8, 120, 130, 100);     // Rear Left
 SpiderLeg leg4(&pwm, 9, 10, 11, 100, 110, 100);   // Rear Right
 
-float stepLength = 40;
-float stepHeight = 45;
+float stepLength = 50;
+float stepHeight = 40;
 int stepDelay = 5;
 int restDelay = 50;
 int xValue = 0;
-float stepLengthRotate = 60;
+float stepLengthRotate = 30;
 float stepHeightRotate = 50;
 int stepDelayRotate = 5;
 
@@ -65,13 +65,12 @@ void setup() {
   leg4.execute();
   
   penniArm.init();
-  penniArm.close();
+  penniArm.open();
   
   delay(1000); // get everything setup
   Serial.println("Ready to walk!");
 }
 
-// Store command
 static char currentCommand = 'S'; 
 
 void loop() {
@@ -88,7 +87,7 @@ void loop() {
   // Check for new command from Pi
   if (piSerial.available()) {
     char incomingChar = piSerial.read();
-    
+    Serial.println(incomingChar);
     // Only update if command actually changed
     if (incomingChar != currentCommand) {
       currentCommand = incomingChar;
@@ -101,12 +100,16 @@ void loop() {
     case 'F':
       spiderTrot.Trot(1, -1);
       break;
+    
+    case 'B':
+      spiderTrot.Trot(1, 1);
+      break;
       
     case 'L':
       spiderRotate.rotateCounterClockwise(1);
       break;
       
-    case 'B':
+    case 'R':
       spiderRotate.rotateClockwise(1);
       break;
       

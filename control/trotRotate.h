@@ -6,11 +6,10 @@
 
 class trotRotate : public trotForward {
 private:
-  float tibiaGrip;            // Tibia grip angle in degrees
+  float tibiaGrip;  // Tibia grip angle in degrees
   float rearLiftReduction;    
 
 public:
-  // Constructor - inherits from trotForward
   trotRotate(Gait* frontLeft, Gait* frontRight, Gait* rearLeft, Gait* rearRight, int restDelay);
   
   // 1 = clockwise, -1 = counterclockwise
