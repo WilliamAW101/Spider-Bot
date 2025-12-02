@@ -11,24 +11,24 @@ public:
   Gait* RR; // Rear Right leg gait
 
   int restDelay;  // Pause between leg cycles
-  bool walking; // Used for continuous modes
+  bool walking; 
 
   trotForward(Gait* frontLeft, Gait* frontRight, Gait* rearLeft, Gait* rearRight, int restDelay = 50);
 
   // Primary gait
-  void shuffleForward(int cycles);  // Smooth diagonal shuffle gait (replaces side shuffle)
+  void shuffleForward(int cycles);  // Smooth diagonal shuffle gait, sucked too
   void alternatingWalk(int cycles); // this crap sucked
 
   // Continuous versions
   void continuousShuffle(); // Loop shuffle until stopped
 
   // rotation
-  void trotForward::rotate(int cycles, int direction);
+  void trotForward::Trot(int cycles, int direction);
 
   
   void stop();  // Immediately stop continuous gait
   void smoothStop();  // Gracefully stop by returning to stance
-  void prepareStance(); // Reset all legs to neutral/stance position
+  void prepareStance(); // Reset all legs to neutral position
   
 };
 

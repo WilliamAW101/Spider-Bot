@@ -7,7 +7,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-// PCA9685 pulse width constants (microseconds)
+// pulse width constants (microseconds)
 #define SERVOMIN  150  // ~0 degrees 
 #define SERVOMAX  600  // ~180 degrees 
 
@@ -24,19 +24,18 @@ SpiderLeg::SpiderLeg(Adafruit_PWMServoDriver* pwm,
   this->femurOffset = femurOffset;
   this->tibiaOffset = tibiaOffset;
   
-  // Default limits (tune to your robot)
+  // Default limits 
   coxaMin = 0;   coxaMax = 180;
   femurMin = 0;  femurMax = 180;
   tibiaMin = 0;  tibiaMax = 180;
   
-  // Initialize angles to 0 (relative to neutral)
+  // Initialize angles to 0 
   coxaAngle = 0;
   femurAngle = 0;
   tibiaAngle = 0;
 }
 
 int SpiderLeg::angleToPulse(int angle) {
-  // Map 0-180 degrees to SERVOMIN-SERVOMAX pulse width
   int pulse = map(angle, 0, 180, SERVOMIN, SERVOMAX);
   return pulse;
 }
@@ -53,7 +52,7 @@ bool SpiderLeg::moveToPosition(float x, float y, float z) {
 }
 
 void SpiderLeg::moveTo(float coxaAngle, float femurAngle, float tibiaAngle) {
-  // Store relative angles (will be offset when executing)
+  // Store relative angles 
   this->coxaAngle = coxaAngle;
   this->femurAngle = femurAngle;
   this->tibiaAngle = tibiaAngle;
