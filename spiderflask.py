@@ -7,6 +7,7 @@ import sys
 import time
 from flask import Flask, render_template, Response, jsonify
 from threading import Thread
+import math
 
 app = Flask(__name__)
 
@@ -23,7 +24,12 @@ cap = cv2.VideoCapture(0)
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 CENTER_X = FRAME_WIDTH // 2
-TOLERANCE = 70
+TOLERANCE = 150
+
+# Camera calibration (adjust these based on your camera)
+# Focal length and reference object width in pixels (calibrate for your camera)
+FOCAL_LENGTH = 500  # Adjust based on your camera calibration
+REFERENCE_WIDTH = 50  # Expected width of object in real world (cm)
 
 # Global state for web display
 frame_rgb = None
@@ -32,9 +38,35 @@ last_command = None
 previous_command = None
 object_detected = False
 center_x = 0
+object_distance = 0  # Distance in cm
 frame_lock = __import__('threading').Lock()
 manual_mode = False
 manual_command = None
+
+# Position tracking with variable thresholds
+current_position = None  # 'L', 'R', 'F', or None
+position_start_time = None
+POSITION_THRESHOLD_LEFT = 2.0  # 2 seconds for left
+POSITION_THRESHOLD_RIGHT = 2.0  # 2 seconds for right
+POSITION_THRESHOLD_FORWARD = 0.5  # 0.5 seconds for forward
+
+# Grabber auto-close tracking
+object_was_detected = False
+object_lost_time = None
+FORWARD_DURATION = 10  # 5 seconds of forward movement after object lost
+grabber_closing = False
+
+
+def calculate_distance(object_width_pixels):
+    """
+    Calculate distance from object using focal length method.
+    Distance = (REFERENCE_WIDTH * FOCAL_LENGTH) / object_width_pixels
+    Adjust FOCAL_LENGTH and REFERENCE_WIDTH for your setup.
+    """
+    if object_width_pixels > 0:
+        distance = (REFERENCE_WIDTH * FOCAL_LENGTH) / object_width_pixels
+        return distance
+    return 0
 
 
 def send(cmd):
@@ -51,9 +83,70 @@ def send(cmd):
         time.sleep(0.01)
 
 
+def get_position_threshold(position):
+    """Return the threshold time for the given position."""
+    if position == 'L':
+        return POSITION_THRESHOLD_LEFT
+    elif position == 'R':
+        return POSITION_THRESHOLD_RIGHT
+    elif position == 'F':
+        return POSITION_THRESHOLD_FORWARD
+    return 0
+
+
+def update_position_tracking(new_position):
+    """
+    Track how long object is in a specific position (L, R, F, or None).
+    Only send command if position is maintained for the appropriate threshold.
+    """
+    global current_position, position_start_time
+    
+    # If position changed, reset tracking
+    if new_position != current_position:
+        current_position = new_position
+        position_start_time = time.time()
+        return None  # Don't send command yet
+    
+    # Position hasn't changed, check if threshold met
+    if position_start_time is not None:
+        threshold = get_position_threshold(new_position)
+        elapsed = time.time() - position_start_time
+        if elapsed >= threshold:
+            return new_position  # Return command to send
+    
+    return None  # Command not ready yet
+
+
+def handle_object_lost():
+    """Handle the sequence when object is lost after being detected."""
+    global object_lost_time, grabber_closing, previous_command
+    
+    if object_lost_time is None:
+        object_lost_time = time.time()
+        # Close the grabber immediately
+        if arduino is not None:
+            print("Object lost - Closing grabber")
+            arduino.write('C'.encode())
+        grabber_closing = True
+        # Reset previous_command so forward will be sent immediately
+        previous_command = None
+    
+    # Check if 5 seconds have passed
+    elapsed = time.time() - object_lost_time
+    if elapsed < FORWARD_DURATION:
+        # Keep sending forward command
+        send('F')
+    else:
+        # 5 seconds elapsed, stop the forward motion
+        print("5 seconds forward motion complete")
+        object_lost_time = None
+        grabber_closing = False
+
+
 def process_frames():
     """Continuously process video frames."""
     global frame_rgb, mask_frame, object_detected, center_x, manual_mode, manual_command
+    global object_was_detected, object_lost_time, current_position, position_start_time
     
     while True:
         ret, frame = cap.read()
@@ -109,18 +202,29 @@ def process_frames():
             # In auto mode, track object
             if object_found:
                 center_x = cx
+                object_was_detected = True
+                object_lost_time = None  # Reset lost time
+                
                 if cx < CENTER_X - TOLERANCE:
-                    cmd = 'L'
+                    position = 'L'
                 elif cx > CENTER_X + TOLERANCE:
-                    cmd = 'R'
+                    position = 'R'
                 else:
-                    cmd = 'F'
+                    position = 'F'
+                
+                # Check if position has been held long enough to send command
+                cmd_to_send = update_position_tracking(position)
+                if cmd_to_send is not None:
+                    send(cmd_to_send)
             else:
-                cmd = 'N'
-            
-            # Only send if command changed
-            if cmd != previous_command:
-                send(cmd)
+                # Object not found
+                if object_was_detected:
+                    # Object was detected before but is now lost - trigger auto-close sequence
+                    handle_object_lost()
+                else:
+                    # Object was never detected, just reset position tracking
+                    current_position = None
+                    position_start_time = None
 
         object_detected = object_found
 
@@ -179,12 +283,13 @@ def status():
         'center_x': center_x,
         'frame_width': FRAME_WIDTH,
         'last_command': last_command,
+        'current_position': current_position,
         'manual_mode': manual_mode,
+        'grabber_closing': grabber_closing,
         'commands': {
             'L': 'Left',
             'R': 'Right',
             'F': 'Forward',
-            'B': 'Backward',
             'N': 'No Object'
         }
     })
